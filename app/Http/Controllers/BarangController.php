@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 use App\Barang;
 use Auth;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Tymon\JWTAuth\Exceptions\JWTException;
+
 
 class BarangController extends Controller
 {
@@ -16,8 +19,73 @@ class BarangController extends Controller
      */
     public function index()
     {
-        //
+        try{
+	        $data["count"] = Barang::count();
+	        $barang = array();
+
+	        foreach (Barang::all() as $p) {
+	            $item = [
+	                "id"            => $p->id,
+	                "jenis" 	    => $p->jenis,
+	                "nama"          => $p->nama,
+	                "gambar" 	    => $p->gambar,
+	                "deskripsi" 	=> $p->deskripsi,
+	                "harga" 	    => $p->harga,
+	                "created_at"    => $p->created_at,
+	                "updated_at"    => $p->updated_at,
+	            ];
+
+	            array_push($barang, $item);
+	        }
+	        $data["barang"] = $barang;
+	        $data["status"] = 1;
+	        return response($data);
+
+	    } catch(\Exception $e){
+			return response()->json([
+			  'status' => '0',
+			  'message' => $e->getMessage()
+			]);
+      	}
     }
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function getAll($limit = 10, $offset = 0)
+    {
+    	try{
+	        $data["count"] = Barang::count();
+	        $barang = array();
+
+	        foreach (Barang::take($limit)->skip($offset)->get() as $p) {
+	            $item = [
+	                "id"            => $p->id,
+	                "jenis" 	    => $p->jenis,
+	                "nama"          => $p->nama,
+	                "gambar" 	    => $p->gambar,
+	                "deskripsi" 	=> $p->deskripsi,
+	                "harga" 	    => $p->harga,
+	                "created_at"    => $p->created_at,
+	                "updated_at"    => $p->updated_at
+	            ];
+
+	            array_push($barang, $item);
+	        }
+	        $data["barang"] = $barang;
+	        $data["status"] = 1;
+	        return response($data);
+
+	    } catch(\Exception $e){
+			return response()->json([
+			  'status' => '0',
+			  'message' => $e->getMessage()
+			]);
+      	}
+    }
+
 
     /**
      * Show the form for creating a new resource.
@@ -37,23 +105,40 @@ class BarangController extends Controller
      */
     public function store(Request $request)
     {
-        try{    
-            $barang = new barang();
-            $barang->jenis = $request->jenis;
-            $barang->nama = $request->nama;
-            $barang->merk = $request->merk;
-            $barang->transmisi = $request->transmisi;
-            $barang->harga = $request->harga;
-            $barang->deskripsi = $request->deskripsi;
-            $barang->save();
-            return response()->json([
-                'status' => '1',
-                'pesan' => 'Tambah barang berhasil gan!',
-            ]);
-        } catch(\Exception $e){
+        try{
+    		$validator = Validator::make($request->all(), [
+    			'jenis'         => 'required',
+				'nama'	        => 'required|string|max:255',
+				'gambar'        => 'string',
+                'deskripsi'	    => 'required|string|max:500',
+				'harga'		    => 'required|numeric',
+                ]);
+
+    		if($validator->fails()){
+    			return response()->json([
+    				'status'	=> 0,
+    				'message'	=> $validator->errors()
+    			]);
+    		}
+
+    		$data = new Barang();
+	        $data->jenis        = $request->input('jenis');
+	        $data->nama         = $request->input('nama');
+	        $data->gambar       = $request->input('gambar');
+            $data->deskripsi    = $request->input('deskripsi');
+            $data->harga        = $request->input('harga');
+            $data->save();
+
+    		return response()->json([
+    			'status'	=> '1',
+    			'message'	=> 'Data berhasil ditambahkan!'
+    		], 201);
+
+        }catch(\Exception $e){
+
             return response()->json([
                 'status' => '0',
-                'pesan' => 'Tambah barang gagal gan!',
+                'message' => $e->getMessage()
             ]);
         }
     }
@@ -89,7 +174,41 @@ class BarangController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        try {
+            $validator = Validator::make($request->all(), [
+                'jenis'         => 'required',
+				'nama'	        => 'required|string|max:255',
+				'gambar'        => 'string',
+                'deskripsi'	    => 'required|string|max:500',
+				'harga'		    => 'required|numeric',
+          ]);
+  
+            if($validator->fails()){
+                return response()->json([
+                    'status'	=> '0',
+                    'message'	=> $validator->errors()
+                ]);
+            }
+  
+            $data = Barang::where('id', $id)->first();
+            $data->jenis        = $request->input('jenis');
+	        $data->nama         = $request->input('nama');
+	        $data->gambar       = $request->input('gambar');
+            $data->deskripsi    = $request->input('deskripsi');
+            $data->harga        = $request->input('harga');
+            $data->save();
+  
+            return response()->json([
+                'status'	=> '1',
+                'message'	=> 'Data berhasil diubah'
+            ]);
+          
+        } catch(\Exception $e){
+            return response()->json([
+                'status' => '0',
+                'message' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -101,16 +220,24 @@ class BarangController extends Controller
     public function destroy($id)
     {
         try{
-            $barang = barang::find($id);
-            $barang->delete();
-            return response()->json([
-                'status' => '1',
-                'pesan' => 'Hapus data barang berhasil gan',
-            ]);
+
+            $delete = Barang::where("id", $id)->delete();
+
+            if($delete){
+              return response([
+              	"status"	=> 1,
+                  "message"   => "Data berhasil dihapus."
+              ]);
+            } else {
+              return response([
+                "status"  => 0,
+                  "message"   => "Data gagal dihapus."
+              ]);
+            }
         } catch(\Exception $e){
-            return response()->json([
-                'status' => '0',
-                'pesan' => 'Hapus data barang gagal gan',
+            return response([
+            	"status"	=> 0,
+                "message"   => $e->getMessage()
             ]);
         }
     }

@@ -14,13 +14,12 @@ class Barang extends Migration
     public function up()
     {
         Schema::create('barang', function (Blueprint $table) {
-            $table->bigIncrements('id');
-            $table->string('jenis');
+            $table->id();
+            $table->enum('jenis', array('Mobil', 'Motor'));
             $table->string('nama');
-            $table->string('merk');
-            $table->string('transmisi');
-            $table->string('harga');
+            $table->string('gambar');
             $table->text('deskripsi');
+            $table->integer('harga')->default(0);
             $table->timestamps();
         });
     }
